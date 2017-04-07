@@ -1,10 +1,11 @@
 /**
- *  Google Home Helper-Beta 3
+ *  Google Home Helper
  *
- *  Copyright © 2016 Michael Struck
- *  Version 1.0.0 11/26/16
+ *  Copyright © 2017 Michael Struck
+ *  Version 1.0.1b 2/28/17
  * 
- *  Version 1.0.0 (11/26/16) - Initial release
+ *  Version 1.0.0 (12/1/16) - Initial release
+ *  Version 1.0.1b (2/28/17) - Added loop/pusle options for OSRAM DTH from gkl-sf
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -79,11 +80,13 @@ def pageAbout(){
 	}
 }
 def pageSettings(){
-    dynamicPage(name: "pageSettings", title: "Configure Settings", install: false, uninstall: false) {	
-        section {
+    dynamicPage(name: "pageSettings", install: false, uninstall: false) {
+    	section { paragraph "Configure Settings", image: imgURL() + "settings.png" }
+        section (" ") {
             input "speakerSonos", "bool", title: "Show Sonos options", defaultValue: false, submitOnChange:true
 			if (speakerSonos) input "memoryCount", "enum", title: "Maximum number of Sonos memory slots", options: [2:"2",3:"3",4:"4",5:"5",6:"6",7:"7",8:"8"], defaultValue: 2, required: false
             input "tstatNest", "bool", title: "Show Nest options", defaultValue: false
+            input "cLightOSRAM", "bool", title: "Show OSRAM 'loop'/'pulse' options", defaultValue: false
             input "showRestrictions", "bool", title: "Show scenario restrictions", defaultValue: true
             input "showAddSwitches", "bool", title: "Allow in-app virtual switch creation", defaultValue: false
         	input "showNotifyFeed", "bool", title: "Post activity to notification feed" , defaultValue: false
@@ -91,8 +94,9 @@ def pageSettings(){
     }
 }
 def pageSwitches() {
-    dynamicPage(name: "pageSwitches", title: "Add/View Virtual Switches", install: false, uninstall: false) {
-    	section("New switch information"){
+    dynamicPage(name: "pageSwitches", install: false, uninstall: false) {
+    	section { paragraph "Add/View Virtual Switches", image: imgURL() + "add.png" }
+        section("New switch information"){
             input "addSwitchName", "text", title: "Switch Label", description: "Enter a unique label name for the virtual switch", required: false, submitOnChange:true
             input "addSwitchType", "enum", title: "Switch Type...", description: "Choose a switch type", options:["Google Switch","Momentary Button Tile-Google"], required: false, submitOnChange:true	
             if (addSwitchType && addSwitchName) href "pageAddSwitch",title: "Add Switch", description: "Tap to add this switch", image: imgURL() + "add.png"
@@ -164,14 +168,14 @@ def controlOnOff(type){
 	def phrases = location.helloHome?.getPhrases()*.label
 	if (phrases) phrases.sort()	
     section ("When switch is ${type}..."){
-		if (phrases) input "${type}Phrase", "enum", title: "Perform This Routine", options: phrases, required: false
-        input "${type}Mode", "mode", title: "Set Mode To...", required: false
-        input "${type}SHM", "enum",title: "Set Smart Home Monitor To...", options: ["away":"Arm(Away)", "stay":"Arm(Stay)", "off":"Disarm"], required: false
-        href "${type}PageSTDevices", title: "SmartThings Device Control...", description: getDeviceDesc("${type}"), state: getDeviceState("${type}")
-        href "${type}PageHTTP", title: "HTTP Request...", description: getHTTPDesc("${type}"), state: greyOutStateHTTP("${type}")
-        input "${type}Delay", "number", title: "Delay (Minutes) To Activate After Trigger", defaultValue: 0, required: false
-        input ("${type}Contacts", "contact", title: "Send Notifications To...", required: false) {
-        	input "${type}SMSNum", "phone", title: "Send SMS Message (Phone Number)...", required: false
+		if (phrases) input "${type}Phrase", "enum", title: "Perform This Routine", options: phrases, required: false, image: imgURL() + "routine.png" 
+        input "${type}Mode", "mode", title: "Set Mode To...", required: false, image: imgURL() + "modes.png"  
+        input "${type}SHM", "enum",title: "Set Smart Home Monitor To...", options: ["away":"Arm(Away)", "stay":"Arm(Stay)", "off":"Disarm"], required: false, image: imgURL() + "SHM.png"
+        href "${type}PageSTDevices", title: "SmartThings Device Control...", description: getDeviceDesc("${type}"), state: getDeviceState("${type}"), image: imgURL() + "smartthings.png"
+        href "${type}PageHTTP", title: "HTTP Request...", description: getHTTPDesc("${type}"), state: greyOutStateHTTP("${type}"), image: imgURL() + "network.png"
+        input "${type}Delay", "number", title: "Delay (Minutes) To Activate After Trigger", defaultValue: 0, required: false, image: imgURL() + "stopwatch.png"
+        input ("${type}Contacts", "contact", title: "Send Notifications To...", required: false, image: imgURL() + "sms.png") {
+        	input "${type}SMSNum", "phone", title: "Send SMS Message (Phone Number)...", required: false, image: imgURL() + "sms.png"
         	input "${type}PushMsg", "bool", title: "Send Push Message", defaultValue: false
         }
 		input "${type}SMSMsg", "text", title: "Message To Send...", required: false
@@ -202,18 +206,19 @@ def pageHTTPOnOff(type){
 }
 // Show "onPageSTDevices" page
 def onPageSTDevices(){
-	dynamicPage (name: "onPageSTDevices", title: "SmartThings Device Control", install: false, uninstall: false) {
+	dynamicPage (name: "onPageSTDevices", install: false, uninstall: false) {
 		pageSTDevicesOnOff("on")
 	}
 }
 // Show "offPageSTDevices" page
 def offPageSTDevices(){
-	dynamicPage (name: "offPageSTDevices", title: "SmartThings Device Control", install: false, uninstall: false) {
+	dynamicPage (name: "offPageSTDevices", install: false, uninstall: false) {
 		pageSTDevicesOnOff("off")
 	}
 }
 def pageSTDevicesOnOff(type){
-	section ("Switches"){
+	section { paragraph "SmartThings Device Control", image: imgURL() + "smartthings.png"}
+    section ("Switches"){
 		input "${type}Switches", "capability.switch", title: "Control These Switches...", multiple: true, required: false, submitOnChange:true
 		if (settings."${type}Switches") input "${type}SwitchesCMD", "enum", title: "Command To Send To Switches", options:["on":"Turn on","off":"Turn off", "toggle":"Toggle the switches' on/off state"], multiple: false, required: false
 	}
@@ -222,9 +227,9 @@ def pageSTDevicesOnOff(type){
 		if (settings."${type}Dimmers") input "${type}DimmersCMD", "enum", title: "Command To Send To Dimmers", options:["on":"Turn on","off":"Turn off","set":"Set level", "toggle":"Toggle the dimmers' on/off state"], multiple: false, required: false, submitOnChange:true
 		if (settings."${type}DimmersCMD" == "set" && settings."${type}Dimmers") input "${type}DimmersLVL", "number", title: "Dimmers Level", description: "Set dimmer level", required: false, defaultValue: 0
 	}
-	section ("Colored Lights"){
+	section ("Colored Lights", hideWhenEmpty: true){
 		input "${type}ColoredLights", "capability.colorControl", title: "Control These Colored Lights...", multiple: true, required: false, submitOnChange:true
-		if (settings."${type}ColoredLights") input "${type}ColoredLightsCMD", "enum", title: "Command To Send To Colored Lights", options:["on":"Turn on","off":"Turn off","set":"Set color and level", "toggle":"Toggle the lights' on/off state"], multiple: false, required: false, submitOnChange:true
+		if (settings."${type}ColoredLights") input "${type}ColoredLightsCMD", "enum", title: "Command To Send To Colored Lights", options:cLightCTLOptions(), multiple: false, required: false, submitOnChange:true
 		if (settings."${type}ColoredLightsCMD" == "set" && settings."${type}ColoredLights"){
 			input "${type}ColoredLightsCLR", "enum", title: "Choose A Color...", required: false, multiple:false, options: fillColorSettings().name, submitOnChange:true
 			if (settings."${type}ColoredLightsCLR" == "Custom-User Defined"){
@@ -258,22 +263,22 @@ def pagePanic() {
         }
         section ("When panic is activated...", hideWhenEmpty: true){
         	input "alarm", "capability.alarm", title: "Activate Alarms...", multiple: true, required: false, submitOnChange:true
-            if (parent.speakerSonos) input "alarmSonos", "capability.musicPlayer", title: "Use Sonos As Alarm...", multiple: false , required: false , submitOnChange:true
+            if (parent.speakerSonos) input "alarmSonos", "capability.musicPlayer", title: "Use Sonos As Alarm...", multiple: false , required: false , submitOnChange:true,image: imgURL() + "speaker.png"
             if (alarm){
             	input "alarmType", "enum", title: "Select Alarm Type", options: ["strobe":"Strobe light", "siren":"Siren", "both":"Both stobe and siren"], multiple: false, required: false  
-            	input "alarmTimer", "number", title:"Alarm Turns Off Automatically After (Minutes)", required: false
+            	input "alarmTimer", "number", title:"Alarm Turns Off Automatically After (Minutes)", required: false,image: imgURL() + "stopwatch.png"
             }
             if (alarmSonos && parent.speakerSonos  && alarmSonos.name.contains("Sonos")){
-                input "alarmSonosVolume", "number", title:"Sonos Alarm Volume", required: false
+                input "alarmSonosVolume", "number", title:"Sonos Alarm Volume", required: false, image: imgURL() + "volume.png"
                 input "alarmSonosSound", "enum", title:"Sonos Alarm Sound", options: [1:"Alarm 1-European Siren", 2:"Alarm 2-Sci-Fi Siren", 3:"Alarm 3-Police Car Siren", 4:"Alarm 4-Red Alert",5:"Custom-User Defined"], multiple: false, required: false, submitOnChange:true 
                 if (alarmSonosSound == "5") input "alarmSonosCustom", "text", title:"URL/Location Of Custom Sound...", required: false
-                input "alarmSonosTimer", "number", title:"Alarm Turns Off Automatically After (Seconds)", required: false
+                input "alarmSonosTimer", "number", title:"Alarm Turns Off Automatically After (Seconds)", required: false,image: imgURL() + "stopwatch.png"
             }
             if (alarmSonos && parent.speakerSonos  && !alarmSonos.name.contains("Sonos")){
             	paragraph "You have chosen a speaker for your alarm that is not supported. Currently, only Sonos speakers can be used as alarms. Please choose a Sonos speaker."
             }
-            input ("panicContactsOn", "contact", title: "Send Notifications To...", required: false) {
-            	input "panicSMSnumberOn", "phone", title: "Send SMS Message To (Phone Number)...", required: false
+            input ("panicContactsOn", "contact", title: "Send Notifications To...", required: false,image: imgURL() + "sms.png") {
+            	input "panicSMSnumberOn", "phone", title: "Send SMS Message To (Phone Number)...", required: false,image: imgURL() + "sms.png"
             	input "panicPushOn", "bool", title: "Send Push Message", defaultValue: false
             }
             input "panicSMSMsgOn","text",title: "Message To Send...", required: false
@@ -281,8 +286,8 @@ def pagePanic() {
         if (panicSwitchOn && panicSwitchOff){
         	section ("When panic is deactivated..."){
         		if (alarm || alarmSonos) input "alarmOff", "bool", title: "Turn Off Alarm?", defaultValue: false
-            	input ("panicContactsOff", "contact", title: "Send Notifications To...", required: false) {
-                	input "panicSMSnumberOff", "phone", title: "Send SMS Message To (Phone Number)...", required: false
+            	input ("panicContactsOff", "contact", title: "Send Notifications To...", required: false,image: imgURL() + "sms.png") {
+                	input "panicSMSnumberOff", "phone", title: "Send SMS Message To (Phone Number)...", required: false,image: imgURL() + "sms.png"
                 	input "panicPushOff", "bool", title: "Send Push Message", defaultValue: false
             	}
                 input "panicSMSMsgOff","text",title: "Message To Send...", required: false
@@ -296,7 +301,7 @@ def pageSpeaker(){
 		section { paragraph "Speaker Settings", image: imgURL() + "speaker.png" }
         section ("Switch/Speaker Selection"){
         	input "vDimmerSpeaker", "capability.switchLevel", title: "Control Switch (Dimmer)", multiple: false, required:false, submitOnChange:true,image: imgURL() + "dimmer.png"
-            input "speaker", "capability.musicPlayer", title: "Speaker To Control", multiple: false , required: false, submitOnChange:true
+            input "speaker", "capability.musicPlayer", title: "Speaker To Control", multiple: false , required: false, submitOnChange:true,image: imgURL() + "speaker.png"
         }
     	section ("Speaker Volume Limits", hideable: true, hidden: !(upLimitSpeaker || lowLimitSpeaker || speakerInitial)) {        
         	input "upLimitSpeaker", "number", title: "Volume Upper Limit", required: false
@@ -338,7 +343,7 @@ def pageThermostat(){
         section {paragraph "Heating/Cooling Thermostat Settings", image: imgURL() + "temp.png"}
         section ("Switch/Thermostat Selection"){
             input "vDimmerTstat", "capability.switchLevel", title: "Control Switch (Dimmer)", multiple: false, required:false, image: imgURL() + "dimmer.png"
-            input "tstat", "capability.thermostat", title: "Thermostat To Control", multiple: false , required: false
+            input "tstat", "capability.thermostat", title: "Thermostat To Control", multiple: false , required: false, image: imgURL() + "temp.png"
             input "autoControlTstat", "bool", title: "Control Thermostat In 'Auto' Mode", defaultValue: false
         }
         section ("Thermostat Temperature Limits", hideable: true, hidden:!(upLimitTstat ||lowLimitTstat)) {
@@ -367,7 +372,7 @@ page(name: "pageBaseboard", title: "Baseboard Heater Settings", install: false, 
 	section {paragraph "Baseboard Heater Settings", image: imgURL() + "heating.png"}
     section ("Switch/Baseboard Selection") {
 		input "vDimmerBB", "capability.switchLevel", title: "Control Switch (Dimmer)", multiple: false, required:false,image: imgURL() + "dimmer.png"
-		input "tstatBB", "capability.thermostat", title: "Thermostat To Control", multiple: true, required: false
+		input "tstatBB", "capability.thermostat", title: "Thermostat To Control", multiple: true, required: false, image: imgURL() + "temp.png"
 	}
 	section ("Baseboard Temperature Limits", hideable: true, hidden:!(upLimitTstatBB ||lowLimitTstatBB)) {
 		input "upLimitTstatBB", "number", title: "Thermostat Upper Limit", required: false
@@ -384,10 +389,10 @@ def pageVoice(){
         section { paragraph "Voice Reporting Settings", image: imgURL() + "voice.png" }
         section ("Switch/Speaker Selection") {
             input "voiceControl", "capability.momentary", title: "Voice Report Control Switch (Momentary)", multiple: false, required: true,image: imgURL() + "button.png"
-            input "voiceSpeaker", "capability.musicPlayer", title: "Voice Report Speaker", multiple: false, required: false, submitOnChange:true
-            if (voiceSpeaker) input "voiceVolume", "number", title: "Speaker Volume", required: false
+            input "voiceSpeaker", "capability.musicPlayer", title: "Voice Report Speaker", multiple: false, required: false, submitOnChange:true,image: imgURL() + "speaker.png"
+            if (voiceSpeaker) input "voiceVolume", "number", title: "Speaker Volume", required: false, image: imgURL() + "volume.png"
             input "voiceDevice", "capability.speechSynthesis", title: "Voice Report Speech Synthesis Device", multiple: false, required: false, hideWhenEmpty: true
-			input "voiceDelay", "number", title: "Delay (Minutes) After Trigger To Report", defaultValue: 0, required: false
+			input "voiceDelay", "number", title: "Delay (Minutes) After Trigger To Report", defaultValue: 0, required: false,image: imgURL() + "stopwatch.png"
             if (voiceSpeaker) input "voiceResume", "bool", title: "Resume Music/Track After Voice Report", defaultValue: false
             input "voiceNotification", "bool", title: "Push/SMS Notification Of Report", defaultValue: false, submitOnChange:true
             if (voiceNotification){
@@ -399,11 +404,11 @@ def pageVoice(){
         }
         section ("Report Types"){
             input "voicePre", "text", title: "Pre Message Before Device Report", description: "Enter a message to play before the device report", defaultValue: "This is your SmartThings voice report for %time%, %day%, %date%.", required: false, capitalization: "sentences"
-            href "pageSwitchReport", title: "Switch/Dimmer Report", description: reportDesc(voiceSwitch, voiceDimmer, ""), state: greyOutState(voiceSwitch, voiceDimmer, "")
-            href "pagePresenceReport", title: "Presence Report", description: reportDesc(voicePresence, "", ""), state: greyOutState(voicePresence, "", "")
-            href "pageDoorReport", title: "Door/Window Report", description: reportDesc(voiceDoorSensors, voiceDoorControls, voiceDoorLocks), state: greyOutState(voiceDoorSensors, voiceDoorControls, voiceDoorLocks)
-            href "pageTempReport", title: "Temperature/Thermostat Report", description: reportDesc(voiceTemperature, voiceTempSettings, voiceTempVar), state: greyOutState(voiceTemperature, voiceTempSettings, voiceTempVar)
-            href "pageHomeReport", title: "Mode and Smart Home Monitor Report", description: reportDescMSHM(), state: greyOutState(voiceMode, voiceSHM, "")
+            href "pageSwitchReport", title: "Switch/Dimmer Report", description: reportDesc(voiceSwitch, voiceDimmer, ""), state: greyOutState(voiceSwitch, voiceDimmer, ""), image: imgURL() + "power.png"
+            href "pagePresenceReport", title: "Presence Report", description: reportDesc(voicePresence, "", ""), state: greyOutState(voicePresence, "", ""), image : imgURL() + "people.png" 
+            href "pageDoorReport", title: "Door/Window Report", description: reportDesc(voiceDoorSensors, voiceDoorControls, voiceDoorLocks), state: greyOutState(voiceDoorSensors, voiceDoorControls, voiceDoorLocks), image: imgURL() + "lock.png"
+            href "pageTempReport", title: "Temperature/Thermostat Report", description: reportDesc(voiceTemperature, voiceTempSettings, voiceTempVar), state: greyOutState(voiceTemperature, voiceTempSettings, voiceTempVar),image: imgURL() + "temp.png"
+            href "pageHomeReport", title: "Mode and Smart Home Monitor Report", description: reportDescMSHM(), state: greyOutState(voiceMode, voiceSHM, ""), image: imgURL() + "modes.png"
             input "voicePost", "text", title: "Post Message After Device Report", description: "Enter a message to play after the device report", required: false, capitalization: "sentences"
         }
     }
@@ -777,6 +782,11 @@ def voiceReport(){
     }
 }
 //Common Methods-------------
+def cLightCTLOptions(){
+	def options=["on":"Turn on","off":"Turn off","set":"Set color and level", "toggle":"Toggle the lights' on/off state"]
+    if (parent.cLightOSRAM) options +=["loopOn":"Turn on color loop","loopOff":"Turn off color loop","pulseOn":"Turn on pulse","pulseOff":"Turn off pulse" ]
+    return options
+}
 private String convertToHex(ipAddress, port){
 	String hexIP = ipAddress.tokenize( '.' ).collect {  String.format( '%02x', it.toInteger() ) }.join()
     String hexPort = port.toString().format( '%04x', port.toInteger() )
@@ -878,10 +888,14 @@ def getDeviceDesc(type){
         result += dimmers && cmd.dimmer != "set" ? "${dimmers} set to ${cmd.dimmer}" : ""
         result += dimmers && cmd.dimmer == "set" ? "${dimmers} set to ${lvl}%" : ""	
         result += result && cLights ? "\n" : ""
-    	result += cLights && cmd.cLight != "set" ? "${cLights} set to ${cmd.cLight}":""
+    	result += cLights && cmd.cLight != "set" && cmd.cLight != "loopOn" && cmd.cLight != "loopOff" && cmd.cLight!="pulseOn" && cmd.cLight!="pulseOff" ? "${cLights} set to ${cmd.cLight}":""
         result += cLights && cmd.cLight == "set" ? "${cLights} set to " : ""
         result += cLights && cmd.cLight == "set" && clr ? "${clr} and " : ""
         result += cLights && cmd.cLight == "set" ? "${cLvl}%" : ""
+        result += cLights && cmd.cLight == "loopOn" ? "${cLights} turn on color loop" : ""
+        result += cLights && cmd.cLight == "loopOff" ? "${cLights} turn off color loop" : ""
+        result += cLights && cmd.cLight == "pulseOn" ? "${cLights} turn on pulse" : ""
+        result += cLights && cmd.cLight == "pulseOff" ? "${cLights} turn off pulse" : ""
         result += result && tstats ? "\n" : ""
         result += tstats && cmd.tstat && tLvl ? "${tstats} set to ${cmd.tstat} : ${tLvl}" : ""
         result += result && locks ? "\n":""
@@ -928,10 +942,13 @@ private getTimeOk(startTime, endTime) {
 }
 def fillColorSettings(){ 
 	def colorData = []
-    colorData << [name: "Soft White", hue: 23, sat: 56] << [name: "White - Concentrate", hue: 52, sat: 19]  << [name: "Daylight - Energize", hue: 52, sat: 16] 
-    colorData << [name: "Warm White - Relax", hue: 13, sat: 30] << [name: "Red", hue: 100, sat: 100] << [name: "Green", hue: 37, sat: 100]
-	colorData << [name: "Blue", hue: 64, sat: 100] << [name: "Yellow", hue: 16, sat: 100] << [name: "Orange", hue: 8, sat: 100]
-    colorData << [name: "Purple", hue: 78, sat: 100] << [name: "Pink", hue: 87, sat: 100] << [name: "Custom-User Defined", hue: 0, sat: 0]
+    colorData << [name: "White", hue: 0, sat: 0] << [name: "Orange", hue: 11, sat: 100] << [name: "Red", hue: 100, sat: 100] << [name: "Purple", hue: 77, sat: 100]
+    colorData << [name: "Green", hue: 30, sat: 100] << [name: "Blue", hue: 66, sat: 100] << [name: "Yellow", hue: 16, sat: 100] << [name: "Pink", hue: 95, sat: 100]
+    colorData << [name: "Cyan", hue: 50, sat: 100] << [name: "Chartreuse", hue: 25, sat: 100] << [name: "Teal", hue: 44, sat: 100] << [name: "Magenta", hue: 92, sat: 100]
+	colorData << [name: "Violet", hue: 83, sat: 100] << [name: "Indigo", hue: 70, sat: 100]<< [name: "Marigold", hue: 16, sat: 75]<< [name: "Raspberry", hue: 99, sat: 75]
+    colorData << [name: "Fuchsia", hue: 92, sat: 75] << [name: "Lavender", hue: 83, sat: 75]<< [name: "Aqua", hue: 44, sat: 75]<< [name: "Amber", hue: 11, sat: 75]
+    colorData << [name: "Carnation", hue: 99, sat: 50] << [name: "Periwinkle", hue: 70, sat: 50]<< [name: "Pistachio", hue: 30, sat: 50]
+    colorData << [name: "Vanilla", hue: 16, sat: 50] << [name: "Custom-User Defined", hue: 0, sat: 0]
 }
 private setColoredLights(switches, color, level, type){
 	def getColorData = fillColorSettings().find {it.name==color}
@@ -944,7 +961,11 @@ private setColoredLights(switches, color, level, type){
 		satLevel = satLevel > 100 ? 100 : satLevel < 0 ? 0 : satLevel
 	}
     def newValue = [hue: hueColor as int, saturation: satLevel as int, level: level as int]
-	switches?.setColor(newValue)
+	if (parent.cLightOSRAM){
+		try { switches?.loopOff() }
+		catch (e) { log.warn "You have attempted a command that is not compatible with the the device handler you are using. Try to turn off the Osram functions in Settings"  }  
+	}
+    switches?.setColor(newValue)
 }
 def songOptions(slot) {
     if (speaker) {
@@ -1145,14 +1166,14 @@ def getSwitchAbout(){ return "Created by Google Home Helper SmartApp" }
 //Version/Copyright/Information/Help
 private def textAppName() { return "Google Home Helper" }	
 private def textVersion() {
-    def version = "SmartApp Version: 1.0.0 (11/26/2016)"
+    def version = "SmartApp Version: 1.0.1b (02/28/2017)"
     def deviceCount= getChildDevices().size()
     def deviceVersion = state.sw1Ver && deviceCount ? "\n${state.sw1Ver}": ""
     deviceVersion += state.sw2Ver && deviceCount ? "\n${state.sw2Ver}": ""
     return "${version}${deviceVersion}"
 }
-private def versionInt(){return 100}
-private def textCopyright() {return "Copyright © 2016 Michael Struck"}
+private def versionInt(){return 101}
+private def textCopyright() {return "Copyright © 2017 Michael Struck"}
 private def textLicense() {
     def text =
 		"Licensed under the Apache License, Version 2.0 (the 'License'); "+
